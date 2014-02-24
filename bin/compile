@@ -37,15 +37,15 @@ mkdir -p $CACHE_DIR/src
 mv * $CACHE_DIR/src
 mv $CACHE_DIR/src .
 
-echo "Installing Jekyll"
-/usr/local/bin/gem install jekyll --no-rdoc --no-ri
-
-# Run Jekyll
+# Install Jekyll
+echo "-----> Installing Jekyll"
 export GEM_HOME=$BUILD_DIR/.gems
 export PATH=$BUILD_DIR/.gems/bin:$PATH
-export LC_ALL=en_US.UTF8
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+/usr/local/bin/gem install bundler jekyll --no-rdoc --no-ri
 
-echo "Compiling Jekyll site"
+echo "-----> Compiling Jekyll site"
 cd $BUILD_DIR/src
 $BUILD_DIR/.gems/bin/jekyll build --destination $BUILD_DIR/www
 
