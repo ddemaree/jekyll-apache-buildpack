@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir>
+
+# fail fast
+set -e
+
+# Heroku Revision.
+#
+# Affixed to all vendored binary output to represent changes to the
+# compilation environment without a change to the upstream version,
+# e.g. PHP 5.3.27 without, and then subsequently with, libmcrypt.
+heroku_rev='-2'
+
+# config
+APACHE_VERSION="2.2.25"
+APACHE_PATH="apache"
+
+BIN_DIR=$(dirname $0)
+BUILD_DIR=$1
+CACHE_DIR=$2
+LP_DIR=`cd $(dirname $0); cd ..; pwd`
+
+# include .files when moving things around
+shopt -s dotglob
+
+cd $BUILD_DIR
+
+# move app things to src
+mkdir -p $CACHE_DIR/src
+mv * $CACHE_DIR/src
+mv $CACHE_DIR/src .
+
+
+# Install gems into hidden directory in app root
+cat << EOF > ~/.gemrc
+gemhome: $BUILD_DIR/.gems
+gempath:
+- $BUILD_DIR/.gems
+EOF
+
+echo "Installing Jekyll"
+/usr/local/bin/gem install jekyll --no-rdoc --no-ri
+
+
+# Run Jekyll
+echo "Setting environment variables"
+export GEM_HOME=$BUILD_DIR/.gems
+export PATH=$BUILD_DIR/.gems/bin:$PATH
+export LC_ALL=en_US.UTF8
+
+echo "Compiling Jekyll site"
+cd $BUILD_DIR/src
+$BUILD_DIR/.gems/bin/jekyll build --destination $BUILD_DIR/www
+
+cd $BUILD_DIR
+
+APACHE_URL="https://heroku-buildpack-php.s3.amazonaws.com/apache-""$APACHE_VERSION""$heroku_rev"".tar.gz"
+echo "-----> Bundling Apache version $APACHE_VERSION"
+curl --silent --max-time 60 --location "$APACHE_URL" | tar xz
+
+# update config files
+cp $LP_DIR/conf/httpd.conf $APACHE_PATH/conf
+
+cat >>boot.sh <<EOF
+for var in \`env|cut -f1 -d=\`; do
+  echo "PassEnv \$var" >> /app/apache/conf/httpd.conf;
+done
+touch /app/apache/logs/error_log
+touch /app/apache/logs/access_log
+tail -F /app/apache/logs/error_log &
+tail -F /app/apache/logs/access_log
+echo "Launching apache"
+exec /app/apache/bin/httpd -DNO_DETACH
+EOF
+
+chmod +x boot.sh
+
+# clean the cache
+rm -rf $CACHE_DIR
