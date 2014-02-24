@@ -20,11 +20,6 @@ BUILD_DIR=$1
 CACHE_DIR=$2
 LP_DIR=`cd $(dirname $0); cd ..; pwd`
 
-# Run Jekyll
-export GEM_HOME=$BUILD_DIR/.gems
-export PATH=$BUILD_DIR/.gems/bin:$PATH
-export LC_ALL=en_US.UTF8
-
 # Install gems into hidden directory in app root
 cat << EOF > ~/.gemrc
 gemhome: $BUILD_DIR/.gems
@@ -44,6 +39,11 @@ mv $CACHE_DIR/src .
 
 echo "Installing Jekyll"
 /usr/local/bin/gem install jekyll --no-rdoc --no-ri
+
+# Run Jekyll
+export GEM_HOME=$BUILD_DIR/.gems
+export PATH=$BUILD_DIR/.gems/bin:$PATH
+export LC_ALL=en_US.UTF8
 
 echo "Compiling Jekyll site"
 cd $BUILD_DIR/src
